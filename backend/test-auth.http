@@ -1,0 +1,53 @@
+### FinSight Authentication API Tests
+### Use VS Code REST Client extension or copy to Postman
+
+@baseUrl = http://localhost:5000/api
+@token = your-jwt-token-here
+
+### 1. Register New User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "Test@1234"
+}
+
+### 2. Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test@1234"
+}
+
+### 3. Get Current User (requires token)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### 4. Update Profile (requires token)
+PUT {{baseUrl}}/users/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Name",
+  "currency": "EUR"
+}
+
+### 5. Forgot Password
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+### 6. Logout (requires token)
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+
+### 7. Health Check
+GET http://localhost:5000/health

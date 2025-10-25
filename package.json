@@ -1,0 +1,17 @@
+{
+  "name": "finsight",
+  "version": "1.0.0",
+  "description": "FinSight - AI-Powered Personal Finance Tracker",
+  "scripts": {
+    "install-all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "backend": "npm run dev --prefix backend",
+    "frontend": "npm run dev --prefix frontend"
+  },
+  "keywords": ["finance", "ai", "budgeting", "expense-tracker"],
+  "author": "FinSight Team",
+  "license": "Finsight-License",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

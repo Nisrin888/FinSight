@@ -1,0 +1,18 @@
+const express = require('express');
+const router = express.Router();
+const { protect } = require('../middleware/auth');
+const { mlRateLimiter } = require('../middleware/rateLimiter');
+
+router.get('/', protect, (req, res) => {
+  res.status(501).json({ status: 'info', message: 'Get insights - Phase 4' });
+});
+
+router.post('/generate', protect, mlRateLimiter, (req, res) => {
+  res.status(501).json({ status: 'info', message: 'Generate AI insights - Phase 5' });
+});
+
+router.post('/train-model', protect, mlRateLimiter, (req, res) => {
+  res.status(501).json({ status: 'info', message: 'Train ML model - Phase 5' });
+});
+
+module.exports = router;
