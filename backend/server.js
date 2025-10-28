@@ -71,6 +71,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/insights', insightRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/ml', require('./routes/ml.routes'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -16,12 +16,16 @@ import Categories from './pages/Categories';
 import Insights from './pages/Insights';
 import Goals from './pages/Goals';
 import Settings from './pages/Settings';
+import AIInsights from './pages/AIInsights';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Store
 import useAuthStore from './store/authStore';
+
+// Context
+import { InsightsProvider } from './context/InsightsContext';
 
 function App() {
   const { loadUser } = useAuthStore();
@@ -32,8 +36,9 @@ function App() {
   }, [loadUser]);
 
   return (
-    <Router>
-      <div className="min-h-screen bg-gradient-bg">
+    <InsightsProvider>
+      <Router>
+        <div className="min-h-screen bg-gradient-bg">
         {/* Toast Notifications */}
         <Toaster
           position="top-right"
@@ -112,6 +117,14 @@ function App() {
             }
           />
           <Route
+            path="/ai-insights"
+            element={
+              <ProtectedRoute>
+                <AIInsights />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/goals"
             element={
               <ProtectedRoute>
@@ -131,8 +144,9 @@ function App() {
           {/* 404 Redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </div>
-    </Router>
+        </div>
+      </Router>
+    </InsightsProvider>
   );
 }
 

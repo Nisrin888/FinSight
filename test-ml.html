@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinSight ML Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2d3748;
+            text-align: center;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .test-title {
+            font-weight: 600;
+            font-size: 18px;
+            color: #2d3748;
+        }
+        .status {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .status.pending { background: #e2e8f0; color: #4a5568; }
+        .status.testing { background: #fef3c7; color: #92400e; }
+        .status.success { background: #d1fae5; color: #065f46; }
+        .status.error { background: #fee2e2; color: #991b1b; }
+        .result {
+            margin-top: 10px;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .input-group {
+            margin: 20px 0;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .summary {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+            padding: 20px;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 FinSight ML Models Test Suite</h1>
+
+    <div class="input-group">
+        <label for="userId">User ID (Get this from MongoDB or login to your app):</label>
+        <input type="text" id="userId" placeholder="Enter your MongoDB user ID (e.g., 67123abc456def789012345)">
+        <br><br>
+        <label for="token">Auth Token (Optional - for backend testing):</label>
+        <input type="text" id="token" placeholder="Bearer token from login">
+    </div>
+
+    <div style="text-align: center;">
+        <button onclick="runAllTests()" id="runBtn">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="summary" class="summary" style="display: none;"></div>
+
+    <div id="tests"></div>
+
+    <script>
+        const ML_URL = 'http://localhost:8000';
+        const BACKEND_URL = 'http://localhost:5000';
+
+        const tests = [
+            {
+                id: 'health',
+                title: '1. ML Service Health Check',
+                endpoint: `${ML_URL}/health`,
+                method: 'GET',
+                body: null,
+                needsUserId: false
+            },
+            {
+                id: 'forecast',
+                title: '2. Spending Forecast (Prophet)',
+                endpoint: `${ML_URL}/api/ml/forecast`,
+                method: 'POST',
+                body: (userId) => ({ user_id: userId, days: 30 }),
+                needsUserId: true
+            },
+            {
+                id: 'forecast-category',
+                title: '3. Category Forecast',
+                endpoint: `${ML_URL}/api/ml/forecast/category`,
+                method: 'POST',
+                body: (userId) => ({ user_id: userId, days: 30 }),
+                needsUserId: true
+            },
+            {
+                id: 'anomalies',
+                title: '4. Anomaly Detection (Isolation Forest)',
+                endpoint: `${ML_URL}/api/ml/anomaly-detection`,
+                method: 'POST',
+                body: (userId) => ({ user_id: userId }),
+                needsUserId: true
+            },
+            {
+                id: 'anomalies-category',
+                title: '5. Category Anomaly Detection',
+                endpoint: `${ML_URL}/api/ml/anomaly-detection/category`,
+                method: 'POST',
+                body: (userId) => ({ user_id: userId }),
+                needsUserId: true
+            },
+            {
+                id: 'budget',
+                title: '6. Budget Recommendations',
+                endpoint: `${ML_URL}/api/ml/budget-recommendations`,
+                method: 'POST',
+                body: (userId) => ({ user_id: userId, approach: 'balanced' }),
+                needsUserId: true
+            },
+            {
+                id: 'goals-predict',
+                title: '7. Goal Achievement Prediction',
+                endpoint: `${ML_URL}/api/ml/goal-prediction`,
+                method: 'POST',
+                body: (userId) => ({
+                    user_id: userId,
+                    target_amount: 10000,
+                    current_amount: 2000,
+                    monthly_contribution: 500,
+                    deadline: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0]
+                }),
+                needsUserId: true
+            },
+            {
+                id: 'goals-analyze',
+                title: '8. All Goals Analysis',
+                endpoint: `${ML_URL}/api/ml/goals/analyze-all`,
+                method: 'POST',
+                body: (userId) => ({ user_id: userId }),
+                needsUserId: true
+            },
+            {
+                id: 'insights',
+                title: '9. AI Insights (Google Gemini)',
+                endpoint: `${ML_URL}/api/ml/insights`,
+                method: 'POST',
+                body: (userId) => ({ user_id: userId }),
+                needsUserId: true
+            }
+        ];
+
+        function createTestElement(test) {
+            return `
+                <div class="test-container" id="test-${test.id}">
+                    <div class="test-header">
+                        <div class="test-title">${test.title}</div>
+                        <div class="status pending" id="status-${test.id}">Pending</div>
+                    </div>
+                    <div class="result" id="result-${test.id}" style="display: none;"></div>
+                </div>
+            `;
+        }
+
+        function init() {
+            const testsContainer = document.getElementById('tests');
+            testsContainer.innerHTML = tests.map(createTestElement).join('');
+        }
+
+        async function runTest(test) {
+            const userId = document.getElementById('userId').value.trim();
+
+            if (test.needsUserId && !userId) {
+                updateStatus(test.id, 'error', 'User ID required');
+                showResult(test.id, 'Error: User ID is required for this test');
+                return false;
+            }
+
+            updateStatus(test.id, 'testing', 'Testing...');
+
+            try {
+                const options = {
+                    method: test.method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+
+                if (test.body) {
+                    options.body = JSON.stringify(
+                        typeof test.body === 'function' ? test.body(userId) : test.body
+                    );
+                }
+
+                const response = await fetch(test.endpoint, options);
+                const data = await response.json();
+
+                const success = response.ok && (
+                    data.status === 'success' ||
+                    data.status === 'healthy' ||
+                    (data.data && data.data.success)
+                );
+
+                if (success) {
+                    updateStatus(test.id, 'success', 'Success');
+                    showResult(test.id, formatResult(data, test.id));
+                    return true;
+                } else {
+                    updateStatus(test.id, 'error', 'Failed');
+                    showResult(test.id, JSON.stringify(data, null, 2));
+                    return false;
+                }
+            } catch (error) {
+                updateStatus(test.id, 'error', 'Error');
+                showResult(test.id, `Error: ${error.message}`);
+                return false;
+            }
+        }
+
+        function formatResult(data, testId) {
+            let result = JSON.stringify(data, null, 2);
+
+            // Add helpful summaries
+            if (testId === 'forecast' && data.data && data.data.statistics) {
+                const stats = data.data.statistics;
+                result = `✓ Forecast Generated Successfully!\n\n` +
+                         `Historical Avg: $${stats.historical_avg_daily.toFixed(2)}/day\n` +
+                         `Forecast Avg: $${stats.forecast_avg_daily.toFixed(2)}/day\n` +
+                         `Trend: ${stats.trend_percentage > 0 ? '+' : ''}${stats.trend_percentage.toFixed(1)}%\n` +
+                         `Total Predicted: $${stats.total_predicted_spending.toFixed(2)}\n\n` +
+                         `Full Response:\n${result}`;
+            } else if (testId === 'anomalies' && data.data && data.data.statistics) {
+                const stats = data.data.statistics;
+                result = `✓ Anomaly Detection Complete!\n\n` +
+                         `Total Transactions: ${stats.total_transactions}\n` +
+                         `Anomalies Detected: ${stats.anomalies_detected}\n` +
+                         `Anomaly Rate: ${stats.anomaly_percentage.toFixed(1)}%\n\n` +
+                         `Full Response:\n${result}`;
+            } else if (testId === 'budget' && data.data && data.data.total_recommended_budget) {
+                result = `✓ Budget Recommendations Generated!\n\n` +
+                         `Total Budget: $${data.data.total_recommended_budget.toFixed(2)}/month\n` +
+                         `Categories: ${data.data.recommendations.length}\n\n` +
+                         `Full Response:\n${result}`;
+            } else if (testId === 'insights' && data.data && data.data.insights) {
+                result = `✓ AI Insights Generated!\n\n` +
+                         `${data.data.insights.substring(0, 300)}...\n\n` +
+                         `Full Response:\n${result}`;
+            }
+
+            return result;
+        }
+
+        function updateStatus(testId, status, text) {
+            const statusEl = document.getElementById(`status-${testId}`);
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = text;
+        }
+
+        function showResult(testId, text) {
+            const resultEl = document.getElementById(`result-${testId}`);
+            resultEl.style.display = 'block';
+            resultEl.textContent = text;
+        }
+
+        async function runAllTests() {
+            const userId = document.getElementById('userId').value.trim();
+
+            if (!userId) {
+                alert('Please enter a User ID first!');
+                return;
+            }
+
+            document.getElementById('runBtn').disabled = true;
+            const results = [];
+
+            for (const test of tests) {
+                const success = await runTest(test);
+                results.push(success);
+                await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between tests
+            }
+
+            const passed = results.filter(r => r).length;
+            const total = results.length;
+            const percentage = (passed / total * 100).toFixed(1);
+
+            const summaryEl = document.getElementById('summary');
+            summaryEl.style.display = 'block';
+            summaryEl.innerHTML = `
+                Tests Complete: ${passed}/${total} passed (${percentage}%)
+                ${passed === total ? '🎉' : '⚠️'}
+            `;
+            summaryEl.style.background = passed === total ? '#d1fae5' : '#fee2e2';
+            summaryEl.style.color = passed === total ? '#065f46' : '#991b1b';
+
+            document.getElementById('runBtn').disabled = false;
+        }
+
+        function clearResults() {
+            tests.forEach(test => {
+                updateStatus(test.id, 'pending', 'Pending');
+                const resultEl = document.getElementById(`result-${test.id}`);
+                resultEl.style.display = 'none';
+            });
+            document.getElementById('summary').style.display = 'none';
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -17,6 +17,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Lightbulb,
+  RefreshCw,
 } from 'lucide-react';
 import {
   LineChart,
@@ -44,18 +45,76 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 // Store
 import useFinancialStore from '../store/financialStore';
+import api from '../services/api';
 
 const Insights = () => {
   const { transactions, categories, isLoadingTransactions, fetchTransactions, fetchCategories } =
     useFinancialStore();
 
   const [timePeriod, setTimePeriod] = useState('30days');
+  const [aiInsights, setAiInsights] = useState([]);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+  const [insightsCached, setInsightsCached] = useState(false);
 
   // Fetch data on mount
   useEffect(() => {
     fetchTransactions();
     fetchCategories();
+    fetchAIInsights();
   }, [fetchTransactions, fetchCategories]);
+
+  // Fetch AI insights from backend
+  const fetchAIInsights = async (forceRefresh = false) => {
+    setLoadingInsights(true);
+    try {
+      const url = `/insights/generate?days=30${forceRefresh ? '&forceRefresh=true' : ''}`;
+      const response = await api.get(url);
+      if (response.data.status === 'success' && response.data.data?.insights) {
+        // Map icon names to icon components
+        const insights = response.data.data.insights.map(insight => ({
+          ...insight,
+          icon: getIconComponent(insight.icon)
+        }));
+        setAiInsights(insights);
+        setInsightsCached(response.data.data.cached || false);
+      }
+    } catch (error) {
+      console.error('Error fetching AI insights:', error);
+      // Fallback to default insights on error
+      setAiInsights(getDefaultInsights());
+      setInsightsCached(false);
+    } finally {
+      setLoadingInsights(false);
+    }
+  };
+
+  // Refresh insights handler
+  const handleRefreshInsights = () => {
+    fetchAIInsights(true);
+  };
+
+  // Map icon names to icon components
+  const getIconComponent = (iconName) => {
+    const iconMap = {
+      'AlertCircle': AlertCircle,
+      'CheckCircle2': CheckCircle2,
+      'Lightbulb': Lightbulb,
+      'AlertTriangle': AlertCircle,
+      'Trophy': Target,
+    };
+    return iconMap[iconName] || Lightbulb;
+  };
+
+  // Default insights as fallback
+  const getDefaultInsights = () => [
+    {
+      type: 'tip',
+      icon: Lightbulb,
+      color: 'text-primary-400',
+      title: 'Start Tracking',
+      message: 'Add more transactions to get personalized AI insights about your spending habits.',
+    },
+  ];
 
   // Time period options
   const timePeriods = [
@@ -194,31 +253,6 @@ const Insights = () => {
     }
     return null;
   };
-
-  // AI Insights (placeholder for now)
-  const aiInsights = [
-    {
-      type: 'warning',
-      icon: AlertCircle,
-      color: 'text-amber-400',
-      title: 'High Dining Spending',
-      message: 'Your dining expenses are 35% above average. Consider meal planning to save $200/month.',
-    },
-    {
-      type: 'success',
-      icon: CheckCircle2,
-      color: 'text-green-400',
-      title: 'Great Savings Progress',
-      message: "You're on track to reach your emergency fund goal by December 2025.",
-    },
-    {
-      type: 'tip',
-      icon: Lightbulb,
-      color: 'text-primary-400',
-      title: 'Optimization Opportunity',
-      message: 'Switch to a rewards credit card for your recurring subscriptions to earn 2% cash back.',
-    },
-  ];
 
   if (isLoadingTransactions && transactions.length === 0) {
     return (
@@ -496,43 +530,66 @@ const Insights = () => {
           {/* AI-Powered Insights */}
           <Card>
             <div className="p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-4 sm:mb-6">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">AI Insights</h3>
+                    <p className="text-xs sm:text-sm text-gray-400">
+                      {insightsCached ? 'Cached recommendations' : 'Personalized recommendations'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-white">AI Insights</h3>
-                  <p className="text-xs sm:text-sm text-gray-400">
-                    Personalized recommendations
-                  </p>
-                </div>
+                <button
+                  onClick={handleRefreshInsights}
+                  disabled={loadingInsights}
+                  className="p-2 rounded-lg bg-dark-hover hover:bg-dark-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Refresh insights"
+                >
+                  <RefreshCw className={`w-4 h-4 text-gray-400 ${loadingInsights ? 'animate-spin' : ''}`} />
+                </button>
               </div>
 
               <div className="space-y-3">
-                {aiInsights.map((insight, index) => {
-                  const Icon = insight.icon;
-                  return (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="p-3 sm:p-4 rounded-xl bg-dark-hover border border-white/10 hover:border-white/20 transition-all"
-                    >
-                      <div className="flex gap-3">
-                        <Icon className={`w-5 h-5 ${insight.color} flex-shrink-0 mt-0.5`} />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm sm:text-base font-semibold text-white mb-1">
-                            {insight.title}
-                          </h4>
-                          <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-                            {insight.message}
-                          </p>
+                {loadingInsights ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                      <p className="text-sm text-gray-400">Generating AI insights...</p>
+                    </div>
+                  </div>
+                ) : aiInsights.length > 0 ? (
+                  aiInsights.map((insight, index) => {
+                    const Icon = insight.icon;
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        className="p-3 sm:p-4 rounded-xl bg-dark-hover border border-white/10 hover:border-white/20 transition-all"
+                      >
+                        <div className="flex gap-3">
+                          <Icon className={`w-5 h-5 ${insight.color} flex-shrink-0 mt-0.5`} />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-white mb-1">
+                              {insight.title}
+                            </h4>
+                            <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
+                              {insight.message}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  })
+                ) : (
+                  <div className="flex items-center justify-center py-8 text-gray-500">
+                    <p className="text-sm">No insights available yet</p>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 pt-4 border-t border-white/10">

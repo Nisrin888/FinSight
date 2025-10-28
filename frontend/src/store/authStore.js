@@ -67,6 +67,10 @@ const useAuthStore = create((set, get) => ({
     set({ isLoading: true });
     try {
       await authService.logout();
+
+      // Clear AI insights cache
+      localStorage.removeItem('aiInsights');
+
       set({
         user: null,
         isAuthenticated: false,

@@ -19,6 +19,7 @@ import {
   Plus,
   TrendingUp,
   BarChart3,
+  Brain,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
@@ -41,6 +42,7 @@ const MainLayout = ({ children }) => {
     { name: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
     { name: 'Accounts', href: '/accounts', icon: Wallet },
     { name: 'Insights', href: '/insights', icon: BarChart3 },
+    { name: 'AI Insights', href: '/ai-insights', icon: Brain },
     { name: 'Goals', href: '/goals', icon: TrendingUp },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
@@ -50,7 +52,7 @@ const MainLayout = ({ children }) => {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
     { name: 'Accounts', href: '/accounts', icon: Wallet },
-    { name: 'Insights', href: '/insights', icon: BarChart3 },
+    { name: 'AI Insights', href: '/ai-insights', icon: Brain },
     { name: 'Goals', href: '/goals', icon: TrendingUp },
   ];
 

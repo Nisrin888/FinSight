@@ -58,6 +58,23 @@
   --z-modal: 1050;
   --z-popover: 1060;
   --z-tooltip: 1070;
+
+  /* Aliases for AIInsights component (for compatibility) */
+  --primary-color: var(--color-primary);
+  --primary-dark: #4F46E5;
+  --success-color: var(--color-success);
+  --danger-color: var(--color-danger);
+  --warning-color: var(--color-warning);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-tertiary);
+  --border-color: var(--color-border);
+  --bg-secondary: var(--color-surface);
+  --dark-bg: var(--color-bg);
+  --dark-surface: var(--color-surface);
+  --dark-card: var(--color-card);
+  --dark-border: var(--color-border);
+  --dark-hover: var(--color-hover);
 }
 
 /* Base Styles */

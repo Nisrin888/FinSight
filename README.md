@@ -31,6 +31,15 @@ FinSight provides users with comprehensive financial management tools including 
 - **Budget Performance**: Track budget utilization and overspending alerts
 - **Goal Progress**: Monitor progress towards financial objectives
 
+### AI & Machine Learning (NEW)
+- **AI Financial Insights**: Powered by Google Gemini AI for personalized financial advice
+- **Spending Forecasts**: Predict future spending patterns using Prophet time series models
+- **Anomaly Detection**: Automatically detect unusual transactions and spending patterns
+- **Smart Budget Recommendations**: AI-generated budget suggestions based on spending history
+- **Goal Achievement Predictions**: Calculate probability of reaching financial goals
+- **Comprehensive Analysis**: Multi-tab AI insights dashboard with real-time predictions
+- **Intelligent Caching**: Smart caching system for faster ML predictions
+
 ### User Experience
 - **Responsive Design**: Fully optimized for desktop, tablet, and mobile devices
 - **Dark Mode Interface**: Modern dark theme with professional aesthetics
@@ -64,13 +73,23 @@ FinSight provides users with comprehensive financial management tools including 
 - **Morgan** - HTTP request logging
 - **Compression** - Response compression middleware
 
+### ML Service (NEW)
+- **Python + FastAPI** - High-performance ML microservice
+- **Prophet** - Facebook's time series forecasting library
+- **Scikit-learn** - Machine learning algorithms (Isolation Forest for anomaly detection)
+- **Pandas & NumPy** - Data processing and numerical computations
+- **Google Gemini AI** - Free LLM for generating personalized financial insights
+- **Uvicorn** - Lightning-fast ASGI server
+
 ## Quick Start
 
 ### Prerequisites
 
 - Node.js >= 18.0.0
 - npm >= 9.0.0
+- Python >= 3.9.0 (for ML service)
 - MongoDB Atlas account or local MongoDB instance
+- Google Gemini API Key (free from Google AI Studio)
 - Git
 
 ### Backend Setup
@@ -112,6 +131,36 @@ npm run dev
 
 The frontend application will be running at `http://localhost:3000`
 
+### ML Service Setup (NEW)
+
+```bash
+# Navigate to ML service directory
+cd ml-service
+
+# Create Python virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+# Add: GEMINI_API_KEY=your-gemini-api-key
+# Add: MONGODB_URI=your-mongodb-connection-string
+
+# Start ML service
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+The ML service API will be running at `http://localhost:8000`
+
+**Note**: The backend expects the ML service to be running on port 8000. Make sure all three services (backend, frontend, ML) are running for full functionality.
+
 ## Project Structure
 
 ```
@@ -119,9 +168,16 @@ Finsight/
 ├── backend/                  # Node.js + Express API
 │   ├── config/              # Configuration files (database, passport)
 │   ├── controllers/         # Route controllers
+│   │   ├── insights.controller.js  # Financial insights
+│   │   └── ml.controller.js        # ML service proxy (NEW)
 │   ├── middleware/          # Custom middleware (auth, upload, rate limiting)
 │   ├── models/              # Mongoose data models
+│   │   └── aiInsight.model.js      # AI insights cache (NEW)
 │   ├── routes/              # API route definitions
+│   │   ├── insight.routes.js       # Insights endpoints
+│   │   └── ml.routes.js            # ML endpoints (NEW)
+│   ├── scripts/             # Utility scripts (NEW)
+│   │   └── seedDemoData.js         # Seed demo financial data
 │   ├── uploads/             # User uploaded files (profile pictures)
 │   ├── .env.example         # Environment variables template
 │   ├── package.json
@@ -134,7 +190,13 @@ Finsight/
 │   │   │   ├── charts/    # Chart components
 │   │   │   ├── layout/    # Layout components
 │   │   │   └── ui/        # UI primitives
+│   │   ├── context/        # React Context (NEW)
+│   │   │   └── InsightsContext.jsx # AI insights state management
 │   │   ├── pages/         # Page components
+│   │   │   ├── AIInsights.jsx      # AI insights dashboard (NEW)
+│   │   │   └── Insights.jsx        # Basic insights page
+│   │   ├── styles/         # Component-specific styles (NEW)
+│   │   │   └── AIInsights.css      # AI insights styling
 │   │   ├── hooks/         # Custom React hooks
 │   │   ├── services/      # API service layer
 │   │   ├── store/         # Zustand state management
@@ -147,6 +209,27 @@ Finsight/
 │   ├── tailwind.config.js  # TailwindCSS configuration
 │   └── vite.config.js      # Vite build configuration
 │
+├── ml-service/              # Python ML Microservice (NEW)
+│   ├── config/              # ML configuration
+│   │   ├── __init__.py
+│   │   └── ml_config.py    # Model parameters and thresholds
+│   ├── database/            # Database utilities
+│   │   ├── __init__.py
+│   │   └── data_fetcher.py # MongoDB data fetching
+│   ├── services/            # ML services
+│   │   ├── __init__.py
+│   │   ├── forecast_service.py    # Prophet time series forecasting
+│   │   ├── anomaly_service.py     # Isolation Forest anomaly detection
+│   │   ├── budget_service.py      # Budget recommendations
+│   │   ├── goal_service.py        # Goal achievement predictions
+│   │   └── insights_service.py    # Gemini AI insights generation
+│   ├── venv/                # Python virtual environment
+│   ├── .env                 # Environment variables (not in git)
+│   ├── main.py              # FastAPI application entry point
+│   ├── requirements.txt     # Python dependencies
+│   └── README.md            # ML service documentation
+│
+├── test-ml.html             # ML service testing tool (NEW)
 ├── .gitignore
 └── README.md
 ```
@@ -176,6 +259,22 @@ GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
 
 # Frontend URL
 FRONTEND_URL=http://localhost:3000
+
+# ML Service URL (NEW)
+ML_SERVICE_URL=http://localhost:8000
+```
+
+### ML Service (.env)
+
+```env
+# MongoDB Connection (same as backend)
+MONGODB_URI=your-mongodb-connection-string
+
+# Google Gemini API (Free from Google AI Studio)
+GEMINI_API_KEY=your-gemini-api-key
+
+# Service Configuration
+PORT=8000
 ```
 
 Refer to `backend/.env.example` for complete configuration options.
@@ -263,6 +362,33 @@ GET    /api/dashboard                  # Get dashboard data
 GET    /api/insights                   # Get financial insights
 ```
 
+### ML & AI Endpoints (NEW)
+
+```http
+# Forecasting
+POST   /api/ml/forecast                # Get spending forecast (30 days)
+POST   /api/ml/forecast/category       # Category-wise spending forecast
+
+# Anomaly Detection
+POST   /api/ml/anomalies               # Detect unusual transactions
+POST   /api/ml/anomalies/category      # Category-wise anomaly detection
+
+# Budget Recommendations
+POST   /api/ml/budget/recommendations  # Get AI budget recommendations
+POST   /api/ml/budget/optimize         # Optimize budget allocation
+
+# Goal Analysis
+POST   /api/ml/goals/predict           # Predict single goal achievement
+POST   /api/ml/goals/analyze           # Analyze all user goals
+
+# AI Insights
+POST   /api/ml/insights                # Get comprehensive AI insights
+POST   /api/ml/insights/specific       # Get context-specific insights
+
+# Service Health
+GET    /api/ml/health                  # Check ML service status
+```
+
 ## Development Roadmap
 
 ### Phase 1: Project Setup & Foundation - COMPLETE
@@ -298,13 +424,19 @@ GET    /api/insights                   # Get financial insights
 - [x] Insights and alerts
 - [x] Data export functionality
 
-### Phase 5: ML/AI Integration - PLANNED
-- [ ] ML microservice setup (Python + FastAPI)
-- [ ] Time series forecasting (Prophet)
-- [ ] Spending prediction models
-- [ ] Anomaly detection
-- [ ] AI-powered insights generation
-- [ ] Automatic model retraining
+### Phase 5: ML/AI Integration - COMPLETE ✅
+- [x] ML microservice setup (Python + FastAPI)
+- [x] Time series forecasting (Prophet)
+- [x] Spending prediction models with 30-day forecasts
+- [x] Anomaly detection (Isolation Forest algorithm)
+- [x] AI-powered insights generation (Google Gemini)
+- [x] Smart budget recommendations
+- [x] Goal achievement predictions
+- [x] Centralized ML configuration with minimum data requirements
+- [x] Comprehensive AI Insights dashboard with 5 tabs
+- [x] Intelligent caching system for ML predictions
+- [x] Demo data seeding script for testing
+- [x] Mobile-responsive AI insights interface
 
 ### Phase 6: Enhanced Features - PLANNED
 - [ ] Email notifications
@@ -356,8 +488,33 @@ Copyright (c) 2025 FinSight™. All rights reserved.
 
 This project is proprietary software. Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited without explicit permission from FinSight™.
 
+## Key Features Implemented
+
+### AI Insights Dashboard
+The AI Insights page provides comprehensive machine learning-powered analysis across 5 key areas:
+
+1. **Overview Tab**: Personalized financial health assessment with AI-generated recommendations
+2. **Forecast Tab**: 30-day spending predictions using Prophet time series models
+3. **Anomalies Tab**: Automatic detection of unusual transactions and spending patterns
+4. **Budget Tab**: AI-recommended budgets based on historical spending patterns
+5. **Goals Tab**: Achievement probability predictions and timeline analysis for financial goals
+
+### Minimum Data Requirements
+To ensure accurate predictions, the ML models require:
+- **30 days** of transaction history
+- **30 transactions** minimum (20 for budget recommendations)
+- Users with insufficient data receive helpful guidance messages
+
+### Demo Data
+Use the seeding script to generate realistic demo data for testing:
+```bash
+cd backend
+node scripts/seedDemoData.js <your-user-id>
+```
+Generates 60 days of transactions across 10+ categories with realistic patterns.
+
 ---
 
-**Current Status**: Phase 4 Complete | Phase 5 (ML/AI) In Planning
+**Current Status**: Phase 5 Complete ✅ | Phase 6 (Enhanced Features) In Planning
 
-**Last Updated**: october 2025
+**Last Updated**: October 2025
