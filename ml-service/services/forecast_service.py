@@ -22,14 +22,14 @@ class ForecastService:
 
         Args:
             user_id: User ID
-            days_history: Number of days of historical data to use
+            days_history: Number of days of historical data to use (ignored, uses all data)
 
         Returns:
             DataFrame with 'ds' (date) and 'y' (daily spending) columns
         """
         try:
-            # Get transaction data
-            df = DataFetcher.get_user_transactions(user_id, days=days_history)
+            # Get ALL transaction data (not just last N days)
+            df = DataFetcher.get_user_transactions(user_id, use_all_data=True)
 
             if df.empty:
                 print(f"[WARNING] No transaction data for user {user_id}")
@@ -83,12 +83,26 @@ class ForecastService:
             # Prepare data
             df = ForecastService.prepare_data(user_id)
 
-            if df.empty or len(df) < FORECAST_MIN_DAYS:
+            if df.empty:
                 return {
                     "success": False,
-                    "error": f"Insufficient data for forecasting (minimum {FORECAST_MIN_DAYS} days of transaction history required)",
+                    "error": "No transaction data found",
                     "forecast": [],
                     "statistics": {}
+                }
+
+            # Check if data spans enough days
+            date_range = (df['ds'].max() - df['ds'].min()).days + 1
+            if date_range < FORECAST_MIN_DAYS:
+                return {
+                    "success": False,
+                    "error": f"Insufficient data for forecasting (data spans {date_range} days, need {FORECAST_MIN_DAYS}+ days)",
+                    "forecast": [],
+                    "statistics": {},
+                    "data_info": {
+                        "days_of_data": date_range,
+                        "total_data_points": len(df)
+                    }
                 }
 
             # Try Prophet-based forecast first
@@ -214,8 +228,8 @@ class ForecastService:
             Dictionary with category-wise forecasts
         """
         try:
-            # Get transaction data
-            df = DataFetcher.get_user_transactions(user_id, days=365)
+            # Get ALL transaction data
+            df = DataFetcher.get_user_transactions(user_id, use_all_data=True)
 
             if df.empty:
                 return {"success": False, "error": "No transaction data", "forecasts": {}}

@@ -112,25 +112,24 @@ class BudgetService:
             Dictionary with budget recommendations
         """
         try:
-            # Validate minimum data requirements
-            df = DataFetcher.get_user_transactions(user_id, days=BUDGET_MIN_DAYS)
+            # Fetch ALL user transactions (not just last N days)
+            df = DataFetcher.get_user_transactions(user_id, use_all_data=True)
 
-            if df.empty or len(df) < BUDGET_MIN_DAYS:
+            # Check if data spans enough days and has enough transactions
+            sufficiency = DataFetcher.check_data_sufficiency(
+                df,
+                min_days=BUDGET_MIN_DAYS,
+                min_transactions=BUDGET_MIN_DAYS,
+                min_expenses=MIN_EXPENSES
+            )
+
+            if not sufficiency["sufficient"]:
                 return {
                     "success": False,
-                    "error": f"Insufficient data for budget recommendations (minimum {BUDGET_MIN_DAYS} days of transaction history required)",
+                    "error": f"Insufficient data for budget recommendations: {sufficiency['reason']}",
                     "recommendations": [],
-                    "total_recommended_budget": 0
-                }
-
-            # Check for enough expense data
-            expenses = df[df['type'] == 'expense']
-            if len(expenses) < MIN_EXPENSES:
-                return {
-                    "success": False,
-                    "error": f"Insufficient expense data (minimum {MIN_EXPENSES} expense transactions required)",
-                    "recommendations": [],
-                    "total_recommended_budget": 0
+                    "total_recommended_budget": 0,
+                    "data_info": sufficiency
                 }
 
             # Analyze spending patterns

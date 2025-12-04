@@ -12,29 +12,86 @@ class DataFetcher:
     """Fetch user financial data for ML models"""
 
     @staticmethod
-    def get_user_transactions(user_id: str, days: int = 365) -> pd.DataFrame:
+    def check_data_sufficiency(df: pd.DataFrame, min_days: int = 30, min_transactions: int = 30, min_expenses: int = 20) -> dict:
+        """
+        Check if user has sufficient data for ML analysis.
+        This checks if the DATA SPANS enough days, not if it's from the last N days.
+
+        Args:
+            df: DataFrame of transactions
+            min_days: Minimum days the data should span (default: 30)
+            min_transactions: Minimum total transactions (default: 30)
+            min_expenses: Minimum expense transactions (default: 20)
+
+        Returns:
+            Dictionary with sufficiency status and details
+        """
+        if df.empty:
+            return {
+                "sufficient": False,
+                "reason": "No transaction data found",
+                "days_of_data": 0,
+                "total_transactions": 0,
+                "expense_transactions": 0
+            }
+
+        # Calculate the span of data (difference between oldest and newest transaction)
+        date_range = (df['date'].max() - df['date'].min()).days + 1
+        total_transactions = len(df)
+        expense_transactions = len(df[df['type'] == 'expense'])
+
+        # Check all conditions
+        has_enough_days = date_range >= min_days
+        has_enough_transactions = total_transactions >= min_transactions
+        has_enough_expenses = expense_transactions >= min_expenses
+
+        sufficient = has_enough_days and has_enough_transactions and has_enough_expenses
+
+        reasons = []
+        if not has_enough_days:
+            reasons.append(f"Data spans only {date_range} days (need {min_days}+)")
+        if not has_enough_transactions:
+            reasons.append(f"Only {total_transactions} transactions (need {min_transactions}+)")
+        if not has_enough_expenses:
+            reasons.append(f"Only {expense_transactions} expense transactions (need {min_expenses}+)")
+
+        return {
+            "sufficient": sufficient,
+            "reason": "; ".join(reasons) if reasons else "Data is sufficient",
+            "days_of_data": date_range,
+            "total_transactions": total_transactions,
+            "expense_transactions": expense_transactions,
+            "oldest_transaction": df['date'].min().strftime('%Y-%m-%d') if not df.empty else None,
+            "newest_transaction": df['date'].max().strftime('%Y-%m-%d') if not df.empty else None
+        }
+
+    @staticmethod
+    def get_user_transactions(user_id: str, days: int = 365, use_all_data: bool = True) -> pd.DataFrame:
         """
         Get user transactions for the specified number of days
 
         Args:
             user_id: User ID
-            days: Number of days to fetch (default: 365)
+            days: Number of days to fetch (default: 365) - only used if use_all_data is False
+            use_all_data: If True, fetch ALL transactions regardless of date (default: True)
 
         Returns:
             DataFrame with columns: date, amount, type, category, description
         """
         try:
-            # Calculate date range
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
+            # Build match query
+            match_query = {"user": ObjectId(user_id)}
+
+            # Only apply date filter if not using all data
+            if not use_all_data:
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=days)
+                match_query["date"] = {"$gte": start_date, "$lte": end_date}
 
             # Use aggregation pipeline to join with categories collection
             pipeline = [
                 {
-                    "$match": {
-                        "user": ObjectId(user_id),
-                        "date": {"$gte": start_date, "$lte": end_date}
-                    }
+                    "$match": match_query
                 },
                 {
                     "$lookup": {

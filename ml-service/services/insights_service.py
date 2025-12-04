@@ -41,14 +41,23 @@ class InsightsService:
             Dictionary with AI-generated insights
         """
         try:
-            # Validate minimum data requirements
-            df = DataFetcher.get_user_transactions(user_id, days=INSIGHTS_MIN_DAYS)
+            # Get ALL user transactions
+            df = DataFetcher.get_user_transactions(user_id, use_all_data=True)
 
-            if df.empty or len(df) < MIN_TRANSACTIONS:
+            # Check data sufficiency based on span, not recency
+            sufficiency = DataFetcher.check_data_sufficiency(
+                df,
+                min_days=INSIGHTS_MIN_DAYS,
+                min_transactions=MIN_TRANSACTIONS,
+                min_expenses=10
+            )
+
+            if not sufficiency["sufficient"]:
                 return {
                     "success": False,
-                    "error": f"Insufficient data for insights (minimum {INSIGHTS_MIN_DAYS} days and {MIN_TRANSACTIONS} transactions required)",
-                    "insights": []
+                    "error": f"Insufficient data for insights: {sufficiency['reason']}",
+                    "insights": [],
+                    "data_info": sufficiency
                 }
 
             # Gather all financial data and predictions

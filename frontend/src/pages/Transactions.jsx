@@ -167,8 +167,12 @@ const Transactions = () => {
 
     try {
       const transactionData = {
-        ...formData,
+        type: formData.type,
         amount: parseFloat(formData.amount),
+        category: formData.category,
+        account: formData.account,
+        date: formData.date,
+        description: formData.description || '',
       };
 
       if (editingTransaction) {

@@ -322,16 +322,25 @@ class GoalService:
                     "overall_assessment": "No active goals"
                 }
 
-            # Validate minimum data requirements for analysis
-            min_days = GOALS_MIN_MONTHS * 30
-            df = DataFetcher.get_user_transactions(user_id, days=min_days)
+            # Fetch ALL user transactions (not just last N days)
+            df = DataFetcher.get_user_transactions(user_id, use_all_data=True)
 
-            if df.empty or len(df) < MIN_TRANSACTIONS:
+            # Check if data spans enough days and has enough transactions
+            min_days = GOALS_MIN_MONTHS * 30
+            sufficiency = DataFetcher.check_data_sufficiency(
+                df,
+                min_days=min_days,
+                min_transactions=MIN_TRANSACTIONS,
+                min_expenses=10  # Lower requirement for goals
+            )
+
+            if not sufficiency["sufficient"]:
                 return {
                     "success": False,
-                    "error": f"Insufficient transaction data for goals analysis (minimum {GOALS_MIN_MONTHS} month(s) and {MIN_TRANSACTIONS} transactions required)",
+                    "error": f"Insufficient transaction data for goals analysis: {sufficiency['reason']}",
                     "total_goals": len(goals),
-                    "goals": []
+                    "goals": [],
+                    "data_info": sufficiency
                 }
 
             # Get savings statistics once

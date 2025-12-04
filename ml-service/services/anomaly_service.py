@@ -63,34 +63,35 @@ class AnomalyService:
 
         Args:
             user_id: User ID
-            days: Number of days to analyze (default: 90)
+            days: Number of days to analyze (ignored, uses all data and checks span)
             contamination: Expected proportion of anomalies (default: 0.1 = 10%)
 
         Returns:
             Dictionary with anomalies and statistics
         """
         try:
-            # Get transaction data
-            df = DataFetcher.get_user_transactions(user_id, days=days)
+            # Get ALL transaction data
+            df = DataFetcher.get_user_transactions(user_id, use_all_data=True)
 
-            if df.empty or len(df) < ANOMALY_MIN_TRANSACTIONS:
+            # Check data sufficiency based on span, not recency
+            sufficiency = DataFetcher.check_data_sufficiency(
+                df,
+                min_days=30,
+                min_transactions=ANOMALY_MIN_TRANSACTIONS,
+                min_expenses=MIN_EXPENSES
+            )
+
+            if not sufficiency["sufficient"]:
                 return {
                     "success": False,
-                    "error": f"Insufficient data for anomaly detection (minimum {ANOMALY_MIN_TRANSACTIONS} transactions required)",
+                    "error": f"Insufficient data for anomaly detection: {sufficiency['reason']}",
                     "anomalies": [],
-                    "statistics": {}
+                    "statistics": {},
+                    "data_info": sufficiency
                 }
 
             # Filter only expenses (anomaly detection on spending)
             expenses = df[df['type'] == 'expense'].copy()
-
-            if len(expenses) < MIN_EXPENSES:
-                return {
-                    "success": False,
-                    "error": f"Insufficient expense data (minimum {MIN_EXPENSES} expense transactions required)",
-                    "anomalies": [],
-                    "statistics": {}
-                }
 
             # Prepare features
             features = AnomalyService.prepare_features(expenses)
@@ -202,14 +203,14 @@ class AnomalyService:
 
         Args:
             user_id: User ID
-            days: Number of days to analyze
+            days: Number of days to analyze (ignored, uses all data)
 
         Returns:
             Dictionary with category-wise anomaly analysis
         """
         try:
-            # Get transaction data
-            df = DataFetcher.get_user_transactions(user_id, days=days)
+            # Get ALL transaction data
+            df = DataFetcher.get_user_transactions(user_id, use_all_data=True)
 
             if df.empty:
                 return {"success": False, "error": "No transaction data", "categories": {}}

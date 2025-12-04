@@ -241,13 +241,74 @@ exports.updateTransaction = async (req, res, next) => {
       });
     }
 
-    // Note: Updating transactions that affect account balances requires
-    // reversing the old transaction and applying the new one
-    // For simplicity, we'll restrict certain updates
+    const { type, amount, category, account, description, date, tags, notes } = req.body;
 
-    const { description, date, tags, notes } = req.body;
+    // Check if amount or type is being changed - need to update account balances
+    const amountChanged = amount !== undefined && amount !== transaction.amount;
+    const typeChanged = type !== undefined && type !== transaction.type;
+    const accountChanged = account !== undefined && account !== transaction.account?.toString();
 
-    if (description) transaction.description = description.trim();
+    if (amountChanged || typeChanged || accountChanged) {
+      // Reverse the old transaction's effect on the old account
+      const oldAccount = await Account.findById(transaction.account);
+      if (oldAccount) {
+        if (transaction.type === 'income') {
+          oldAccount.balance -= transaction.amount;
+        } else if (transaction.type === 'expense') {
+          oldAccount.balance += transaction.amount;
+        }
+        await oldAccount.save();
+      }
+
+      // Determine the new account (either changed or same)
+      const newAccountId = account || transaction.account;
+      const newAccount = await Account.findOne({ _id: newAccountId, user: req.user.id });
+
+      if (!newAccount) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Account not found',
+        });
+      }
+
+      // Apply the new transaction's effect
+      const newType = type || transaction.type;
+      const newAmount = amount !== undefined ? amount : transaction.amount;
+
+      if (newType === 'income') {
+        newAccount.balance += newAmount;
+      } else if (newType === 'expense') {
+        newAccount.balance -= newAmount;
+      }
+      await newAccount.save();
+
+      // Update transaction fields
+      if (type) transaction.type = type;
+      if (amount !== undefined) transaction.amount = amount;
+      if (account) transaction.account = account;
+    }
+
+    // Validate and update category if provided
+    if (category !== undefined) {
+      const categoryDoc = await Category.findOne({ _id: category, user: req.user.id });
+      if (!categoryDoc) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Category not found',
+        });
+      }
+      const txnType = type || transaction.type;
+      if (categoryDoc.type !== txnType && txnType !== 'transfer') {
+        return res.status(400).json({
+          status: 'error',
+          message: `Category type (${categoryDoc.type}) does not match transaction type (${txnType})`,
+        });
+      }
+      transaction.category = category;
+    }
+
+    // Update simple fields
+    if (description !== undefined) transaction.description = description?.trim() || '';
     if (date) transaction.date = date;
     if (tags !== undefined) transaction.tags = tags;
     if (notes !== undefined) transaction.notes = notes?.trim();
@@ -255,7 +316,7 @@ exports.updateTransaction = async (req, res, next) => {
     await transaction.save();
 
     await transaction.populate([
-      { path: 'category', select: 'name icon color type' },
+      { path: 'category', select: 'name icon color type emoji' },
       { path: 'account', select: 'name type color icon' },
       { path: 'toAccount', select: 'name type color icon' },
     ]);

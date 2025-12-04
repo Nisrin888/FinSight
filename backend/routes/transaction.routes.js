@@ -56,11 +56,21 @@ const transactionValidation = [
 ];
 
 const transactionUpdateValidation = [
+  body('type')
+    .optional()
+    .isIn(['income', 'expense', 'transfer'])
+    .withMessage('Type must be income, expense, or transfer'),
+  body('amount')
+    .optional()
+    .isFloat({ min: 0.01 })
+    .withMessage('Amount must be greater than 0'),
+  body('category')
+    .optional(),
+  body('account')
+    .optional(),
   body('description')
     .optional()
     .trim()
-    .notEmpty()
-    .withMessage('Description cannot be empty')
     .isLength({ max: 200 })
     .withMessage('Description cannot exceed 200 characters'),
   body('date')
