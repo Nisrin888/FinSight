@@ -3,7 +3,7 @@
  * Handles user registration, login, logout, password reset
  */
 
-const User = require('../models/User.model');
+const User = require('../models/user.model');
 const Category = require('../models/category.model');
 const { AppError } = require('../middleware/errorHandler');
 const jwt = require('jsonwebtoken');
