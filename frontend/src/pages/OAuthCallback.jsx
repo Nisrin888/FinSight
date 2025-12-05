@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import useAuthStore from '../store/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Remove /api suffix if present since we add it below
+const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 
 /**
  * OAuth Callback Page
@@ -45,7 +46,7 @@ const OAuthCallback = () => {
         localStorage.setItem('refreshToken', refreshToken);
 
         // Fetch user data
-        fetch(`${API_URL}/api/auth/me`, {
+        fetch(`${BASE_URL}/api/auth/me`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
