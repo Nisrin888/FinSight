@@ -320,7 +320,7 @@ const Register = () => {
           <button
             type="button"
             className="w-full btn-secondary flex items-center justify-center gap-3"
-            onClick={() => window.location.href = `${API_URL}/api/auth/google`}
+            onClick={() => window.location.href = `${API_URL}/auth/google`}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
