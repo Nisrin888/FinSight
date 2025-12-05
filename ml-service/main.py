@@ -23,6 +23,14 @@ from services.insights_service import insights_service
 # Load environment variables
 load_dotenv()
 
+# Get allowed origins from environment or use defaults
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5000,http://localhost:3000").split(",")
+
+# Log configuration on startup
+print(f"[CONFIG] Allowed CORS origins: {ALLOWED_ORIGINS}")
+print(f"[CONFIG] MongoDB URI configured: {'Yes' if os.getenv('MONGODB_URI') else 'No'}")
+print(f"[CONFIG] Gemini API Key configured: {'Yes' if os.getenv('GEMINI_API_KEY') else 'No'}")
+
 # Custom JSON encoder for MongoDB ObjectId and NumPy types
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -74,7 +82,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5000", "http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -91,9 +99,12 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    from database.connection import db
+    db_connected = db is not None
     return {
-        "status": "healthy",
+        "status": "healthy" if db_connected else "degraded",
         "service": "ml-service",
+        "database_connected": db_connected,
         "features": [
             "spending_forecast",
             "anomaly_detection",
