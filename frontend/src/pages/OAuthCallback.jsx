@@ -2,9 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import useAuthStore from '../store/authStore';
-
-// Remove /api suffix if present since we add it below
-const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+import authService from '../services/auth.service';
 
 /**
  * OAuth Callback Page
@@ -21,7 +19,8 @@ const OAuthCallback = () => {
     // Prevent running twice in React StrictMode
     if (hasRun.current) return;
     hasRun.current = true;
-    const handleOAuthCallback = () => {
+
+    const handleOAuthCallback = async () => {
       const token = searchParams.get('token');
       const refreshToken = searchParams.get('refreshToken');
       const error = searchParams.get('error');
@@ -41,41 +40,37 @@ const OAuthCallback = () => {
       }
 
       if (token && refreshToken) {
-        // Store tokens
+        // Store tokens first
         localStorage.setItem('token', token);
         localStorage.setItem('refreshToken', refreshToken);
 
-        // Fetch user data
-        fetch(`${BASE_URL}/api/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            // Backend returns { status: 'success', data: {...} }
-            const userData = data.data || data.user; // Handle both formats
+        try {
+          // Use authService to get current user (consistent with rest of app)
+          const response = await authService.getCurrentUser();
+          const userData = response.data;
 
-            if (data.status === 'success' && userData) {
-              // Update auth store
-              setUser(userData);
-              setAuthenticated(true);
+          if (userData) {
+            // Store user in localStorage
+            localStorage.setItem('user', JSON.stringify(userData));
 
-              const userName = userData.name || 'there';
-              toast.success(`Welcome back, ${userName}!`);
-              navigate('/dashboard');
-            } else {
-              console.error('Invalid response format:', data);
-              console.error('Expected: { status: "success", user: {...} }');
-              console.error('Received:', JSON.stringify(data));
-              throw new Error('Failed to fetch user data');
-            }
-          })
-          .catch((error) => {
-            console.error('OAuth callback error:', error);
-            toast.error('Failed to complete sign-in. Please try again.');
-            navigate('/login');
-          });
+            // Update auth store
+            setUser(userData);
+            setAuthenticated(true);
+
+            const userName = userData.name || 'there';
+            toast.success(`Welcome back, ${userName}!`);
+            navigate('/dashboard');
+          } else {
+            throw new Error('No user data received');
+          }
+        } catch (error) {
+          console.error('OAuth callback error:', error);
+          // Clear tokens on error
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          toast.error('Failed to complete sign-in. Please try again.');
+          navigate('/login');
+        }
       } else {
         console.error('Missing tokens in URL. Current URL:', window.location.href);
         toast.error('Invalid authentication response.');
