@@ -248,41 +248,15 @@ const Landing = () => {
             <div className="absolute inset-0 bg-gradient-to-r from-primary-500/20 to-secondary-500/20 blur-3xl" />
 
             <div className="relative bg-gradient-to-br from-dark-card/80 to-dark-card/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-2 shadow-2xl">
-              <div className="aspect-video rounded-2xl bg-gradient-to-br from-primary-500/5 via-dark-bg to-secondary-500/5 border border-white/5 overflow-hidden relative">
-                {/* Grid overlay */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#6366F110_1px,transparent_1px),linear-gradient(to_bottom,#6366F110_1px,transparent_1px)] bg-[size:3rem_3rem]" />
-
-                {/* Animated data visualization */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="grid grid-cols-3 gap-8 p-12">
-                    {[...Array(6)].map((_, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{
-                          duration: 0.8,
-                          delay: 0.6 + i * 0.1,
-                          ease: [0.22, 1, 0.36, 1],
-                        }}
-                        className="h-24 bg-gradient-to-br from-primary-500/20 to-secondary-500/20 backdrop-blur-xl border border-white/10 rounded-xl"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Center icon */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.8, delay: 1, ease: [0.22, 1, 0.36, 1] }}
-                    className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center shadow-2xl shadow-primary-500/50"
-                  >
-                    <TrendingUp className="w-12 h-12 text-white" strokeWidth={2} />
-                  </motion.div>
-                </div>
-              </div>
+              {/* Dashboard Preview Image */}
+              <motion.img
+                src="/dashboard-preview.png"
+                alt="FinSight Dashboard Preview"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                className="rounded-2xl w-full"
+              />
             </div>
           </motion.div>
         </div>
